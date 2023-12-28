@@ -9,7 +9,6 @@ class DataChannel:
         self.publishers: List[str] = []
 
 
-
 class Poster:
     def __init__(self, name, inputs, outputs, system):
         self.name: str = name
@@ -19,7 +18,11 @@ class Poster:
         self.state: list = []
 
     def update(self):
-        self.state = self.system(*[inp.value for inp in self.inputs])
+        state = self.system(*[inp.value for inp in self.inputs])
+        try:
+            self.state = list(state)
+        except:
+            self.state = [state]
 
     def post(self):
         for output, val in zip(self.outputs, self.state):
@@ -32,8 +35,9 @@ class SystemsHandler:
         self.channels: List[DataChannel] = []
 
     def registerSystem(self, name: str, inputs: list[str], outputs: list[str], system: Callable):
-        inputChannels = [ch for ch in self.channels if ch.name in inputs]
-        outputChannels = [ch for ch in self.channels if ch.name in outputs]
+        chDict = self.channelDict()
+        inputChannels = [chDict[inp] for inp in inputs]
+        outputChannels = [chDict[out] for out in outputs]
         self.posters.append(Poster(name, inputChannels, outputChannels, system))
 
         for ch in inputChannels:
@@ -42,8 +46,64 @@ class SystemsHandler:
         for ch in outputChannels:
             ch.publishers.append(name)
 
+    def channelDict(self):
+        return {ch.name: ch for ch in self.channels}
+
     def addChannel(self, channel):
         self.channels.append(channel)
 
     def globalState(self): return {ch.name: ch.value for ch in self.channels}
 
+class TimedSimulation:
+    def __init__(self, systems, channels):
+        self.simulator = self.setSim(systems, channels)
+        self.channelNames = list(self.simulator.globalState().keys())
+        self.history = [list(self.simulator.globalState().values())]
+
+    def setSim(self, systems, channels):
+        sim = SystemsHandler()
+
+        for ch in channels:
+            sim.addChannel(ch)
+
+        for sys in systems:
+            sim.registerSystem(*sys)
+
+        return sim
+
+    def step(self):
+        [P.update() for P in self.simulator.posters]
+        [P.post() for P in self.simulator.posters]
+        self.history.append(list(self.simulator.globalState().values()))
+
+    def runSim(self, T):
+        while self.simulator.globalState()['Time'] < T:
+            self.step()
+
+    def getChVal(self, channel):
+        ind = self.channelNames.index(channel)
+        return [timePt[ind] for timePt in self.history]
+
+    def plotVals(self, channelList: List[List[DataChannel]]):
+        import matplotlib.pyplot as plt
+
+        N = len(channelList)
+        timeVal = self.getChVal('Time')
+
+        for i, channels in enumerate(channelList):
+            plt.subplot(N, 1, i+1)
+            for ch in channels:
+                chVal = self.getChVal(ch)
+                plt.plot(timeVal, chVal, label=ch)
+            plt.legend(loc="upper left")
+
+        plt.show()
+
+
+# def func2Poster(func):
+#     from inspect import signature
+
+
+#     return {}
+
+# ['TotalVolumetricHighFlowSys', ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], ['TotalVolumetricHighFlow'], setTotalVolumetricHighFlow],
