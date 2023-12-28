@@ -63,12 +63,12 @@ def setTotalVolumetricHighFlow(SlideValveA, SlideValveB, SlideValveC, SlideValve
 def setTotalEvapDuty(EvaporatorA, EvaporatorB, EvaporatorC, EvaporatorD, EvaporatorE):
     return np.sum([EvaporatorA, EvaporatorB, EvaporatorC, EvaporatorD, EvaporatorE])
 
-def setTotalMassHighFlow(SuctionPressure, TotalVolumetricFlow):
-    return CP.PropsSI('D', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia') * TotalVolumetricFlow
+def setTotalMassHighFlow(SuctionPressure, TotalVolumetricHighFlow):
+    return CP.PropsSI('D', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia') * TotalVolumetricHighFlow
 
-def setTotalQin(alpha, TotalMassLowFlow, EvaporatorOn, RoomTemp, SuctionPressure):
+def setTotalQin(alpha, TotalMassLowFlow, TotalEvapDuty, RoomTemp, SuctionPressure):
     tempDiff = RoomTemp - toCelsius(CP.PropsSI('T', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia'))
-    return alpha * TotalMassLowFlow * np.sum(EvaporatorOn) * tempDiff
+    return alpha * TotalMassLowFlow * TotalEvapDuty * tempDiff
 
 def setTotalQout(beta, TotalMassHighFlow, CondenserFan, AmbientTemp, DischargePressure):
     tempDiff = toCelsius(CP.PropsSI('T', 'P', toPASCAL(DischargePressure), 'Q', 1, 'Ammonia')) - AmbientTemp
@@ -80,7 +80,7 @@ def setTotalCompressorPower(SlideValves, SuctionPressure):
     perc = 1 + (18 - SuctionPressure)/50 # 2%/psig efficiency gain with higher suction pressure
     return perc * power
 
-def setSuctionPressure(TotalVolumetricFlow, TotalQin):
+def setSuctionPressure(TotalVolumetricHighFlow, TotalQin):
     # evapDuty = np.sum(EvaporatorOn)/5
     # norm = (TotalVolumetricFlow**2 + evapDuty**2)**.5
     # return [18 - 15*(TotalVolumetricFlow - evapDuty)/norm] # coming from thermo models
@@ -111,36 +111,24 @@ def optEvaporatorOn():
 
 ## Configure Systems
 
-systems = [
+posters = [
     ['timer', ['Time', 'DeltaT'], ['Time'], timer],
-    ['Qadder', ['Time'], ['Qadded'], setQadded],
-    #['roomTempSys', ['RoomTemp', 'Qadded', 'TotalQin', 'DeltaT'], ['RoomTemp'], setRoomTemp],
-    ['TotalVolumetricHighFlowSys', ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], ['TotalVolumetricHighFlow'], setTotalVolumetricHighFlow],
-    ['TotalEvapDutySys', ['EvaporatorA', 'EvaporatorB', 'EvaporatorC', 'EvaporatorD', 'EvaporatorE'], ['TotalEvapDuty'], setTotalEvapDuty],
-    ['TotalMassHighFlowSys', ['SuctionPressure', 'TotalVolumetricHighFlow'], ['TotalMassHighFlow'], setTotalMassHighFlow],
-    ['TotalQinSys', ['alpha', 'TotalMassLowFlow', 'TotalEvapDuty', 'RoomTemp', 'SuctionPressure'], ['TotalQin'], setTotalQin],
-    ['TotalQoutSys', ['beta', 'TotalMassHighFlow', 'CondenserFan', 'AmbientTemp', 'DischargePressure'], ['TotalQout'], setTotalQout],
-    # ['TotalCompressorPowerSys', ['SlideValves', 'SuctionPressure'], ['TotalCompressorPower'], setTotalCompressorPower],
-    #['SuctionPressureSys', ['TotalVolumetricFlow', 'TotalQin'], ['SuctionPressure'], setSuctionPressure],
-    ['SlideValveSys', ['Time'], ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], feedbackSlideValves],
+    func2Poster('Qadded', setQadded),
+    func2Poster('RoomTemp', setRoomTemp),
+    func2Poster('TotalVolumetricHighFlow', setTotalVolumetricHighFlow),
+    func2Poster('TotalEvapDuty', setTotalEvapDuty),
+    func2Poster('TotalMassHighFlow', setTotalMassHighFlow),
+    func2Poster('TotalQin', setTotalQin),
+    func2Poster('TotalQout', setTotalQout),
+    # func2Poster('TotalCompressorPower', setTotalCompressorPower),
+    func2Poster('SuctionPressure', setSuctionPressure),
+    # ['SlideValveSys', ['Time'], ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], feedbackSlideValves],
     ['EvaporatorSys', ['RoomTemp'], ['EvaporatorA', 'EvaporatorB', 'EvaporatorC', 'EvaporatorD', 'EvaporatorE'], feedbackEvaporatorOn]
 ]
 
 ### Run Simulation
-# refSim = TimedSimulation(systems, channels)
-# refSim.runSim(10)
-# refSim.plotVals([['Qadded', 'TotalQin'], ['RoomTemp']])
+refSim = TimedSimulation(posters, channels)
+refSim.runSim(10)
+refSim.plotVals([['Qadded', 'TotalQin'], ['RoomTemp']])
 
 #################
-
-def func2Poster(func):
-    from inspect import signature
-    
-    name = func.__name__[3:]  # assuming 'set{Parameter Name}'
-    return ['{}Sys'.format(name), list(signature(func).parameters), [name], func]
-
-
-funcs = [setQadded, setRoomTemp, setTotalVolumetricHighFlow, setTotalEvapDuty, setTotalMassHighFlow, setTotalQin, setTotalQout, setTotalCompressorPower]
-
-for f in funcs:
-    print(func2Poster(f))

@@ -55,8 +55,8 @@ class SystemsHandler:
     def globalState(self): return {ch.name: ch.value for ch in self.channels}
 
 class TimedSimulation:
-    def __init__(self, systems, channels):
-        self.simulator = self.setSim(systems, channels)
+    def __init__(self, posters, channels):
+        self.simulator = self.setSim(posters, channels)
         self.channelNames = list(self.simulator.globalState().keys())
         self.history = [list(self.simulator.globalState().values())]
 
@@ -99,11 +99,6 @@ class TimedSimulation:
 
         plt.show()
 
-
-# def func2Poster(func):
-#     from inspect import signature
-
-
-#     return {}
-
-# ['TotalVolumetricHighFlowSys', ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], ['TotalVolumetricHighFlow'], setTotalVolumetricHighFlow],
+def func2Poster(name, func):
+    from inspect import signature
+    return ['{}Sys'.format(name), list(signature(func).parameters), [name], func]
