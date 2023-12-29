@@ -8,7 +8,6 @@ class DataChannel:
         self.subscribers: List[str] = []
         self.publishers: List[str] = []
 
-
 class Poster:
     def __init__(self, name, inputs, outputs, system):
         self.name: str = name
@@ -27,7 +26,6 @@ class Poster:
     def post(self):
         for output, val in zip(self.outputs, self.state):
             output.value = val
-
 
 class SystemsHandler:
     def __init__(self):
