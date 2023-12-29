@@ -47,18 +47,18 @@ def euler(x, xdot, dT): return x + xdot * dT
 def timer(Time, DeltaT): return Time + DeltaT
 
 def setQadded(Time): 
-    noise = 100 * np.cos(2 * np.pi * Time / 10 ) + 40 * np.random.random() - 20
+    noise = 50 * np.cos(2 * np.pi * Time / 10 ) + 50 * np.random.random()
     return 600 + noise
 
 def setRoomTemp(RoomTemp, Qadded, TotalQin, DeltaT):
-    TRANSFERCOEFF = .0025
+    TRANSFERCOEFF = .005
     RoomTempDot = TRANSFERCOEFF * (Qadded - TotalQin)
     return euler(RoomTemp, RoomTempDot, DeltaT)
 
 def setTotalVolumetricHighFlow(SlideValveA, SlideValveB, SlideValveC, SlideValveD):
     slides = [SlideValveA, SlideValveB, SlideValveC, SlideValveD]
     slideOn = [e for e in slides if e > 0]
-    return (np.sum(slideOn) * .8 + len(slideOn) * .2)/len(slides)  # start up throughput around 20%
+    return (np.sum(slideOn) * .9 + len(slideOn) * .1)/len(slides)  # start up throughput around 10%
 
 def setTotalEvapDuty(EvaporatorA, EvaporatorB, EvaporatorC, EvaporatorD, EvaporatorE):
     return np.sum([EvaporatorA, EvaporatorB, EvaporatorC, EvaporatorD, EvaporatorE])
@@ -74,24 +74,41 @@ def setTotalQout(beta, TotalMassHighFlow, CondenserFan, AmbientTemp, DischargePr
     tempDiff = toCelsius(CP.PropsSI('T', 'P', toPASCAL(DischargePressure), 'Q', 1, 'Ammonia')) - AmbientTemp
     return beta * TotalMassHighFlow * CondenserFan * tempDiff
 
-def setTotalCompressorPower(SlideValves, SuctionPressure):
-    slideOn = [e for e in SlideValves if e > 0]
-    power = np.sum(slideOn) * 100 + len(slideOn) * 10  # rough estimate of Compressor Power 
+def setTotalCompressorPower(SlideValveA, SlideValveB, SlideValveC, SlideValveD, SuctionPressure):
+    slides = [SlideValveA, SlideValveB, SlideValveC, SlideValveD]
+    slideOn = [e for e in slides if e > 0]
+    power = np.sum(slideOn) * 100 + len(slideOn) * 75  # rough estimate of Compressor Power 
     perc = 1 + (18 - SuctionPressure)/50 # 2%/psig efficiency gain with higher suction pressure
     return perc * power
 
-def setSuctionPressure(TotalVolumetricHighFlow, TotalQin):
-    # evapDuty = np.sum(EvaporatorOn)/5
-    # norm = (TotalVolumetricFlow**2 + evapDuty**2)**.5
-    # return [18 - 15*(TotalVolumetricFlow - evapDuty)/norm] # coming from thermo models
-    return 18
+def setSuctionPressure(SuctionPressure, TotalVolumetricHighFlow, TotalQin, DeltaT):
+    DECAY = .5
+    VF = TotalVolumetricHighFlow
+    Q = TotalQin
+    eqSP = 15 * (1-VF)**4 + Q * (1.5 - VF)/80 + 8
+    spDot = DECAY * (eqSP - SuctionPressure)
+    return euler(SuctionPressure, spDot, DeltaT)
 
 
 ## Feedback Controllers
 
-def feedbackSlideValves(Time): #SuctionPressure):
-    a = .1 * np.cos(2 * np.pi * Time / 10 )
-    return [a+.5, a+.6, a+.7, a+.8]
+def feedbackSlideValves(SuctionPressure):
+    sp = SuctionPressure
+    if sp < 10:
+        duty = 0
+    elif sp < 30:
+        duty = (sp - 10)/20
+    else:
+        duty = 1
+
+    slides = [-1, -1, -1, -1]
+    
+    for i, _ in enumerate(slides):
+        if duty > .025:
+            slides[i] = min(1, (duty-.025)/.1)
+            duty = duty - slides[i]*.225 - .025
+    
+    return slides
 
 def feedbackEvaporatorOn(RoomTemp):
     if RoomTemp < -.5:
@@ -120,15 +137,15 @@ posters = [
     func2Poster('TotalMassHighFlow', setTotalMassHighFlow),
     func2Poster('TotalQin', setTotalQin),
     func2Poster('TotalQout', setTotalQout),
-    # func2Poster('TotalCompressorPower', setTotalCompressorPower),
+    func2Poster('TotalCompressorPower', setTotalCompressorPower),
     func2Poster('SuctionPressure', setSuctionPressure),
-    # ['SlideValveSys', ['Time'], ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], feedbackSlideValves],
+    ['SlideValveSys', ['SuctionPressure'], ['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], feedbackSlideValves],
     ['EvaporatorSys', ['RoomTemp'], ['EvaporatorA', 'EvaporatorB', 'EvaporatorC', 'EvaporatorD', 'EvaporatorE'], feedbackEvaporatorOn]
 ]
 
 ### Run Simulation
 refSim = TimedSimulation(posters, channels)
-refSim.runSim(10)
-refSim.plotVals([['Qadded', 'TotalQin'], ['RoomTemp']])
+refSim.runSim(20)
+refSim.plotVals([['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], ['TotalCompressorPower'], ['SuctionPressure'], ['RoomTemp'], ['Qadded', 'TotalQin']])
 
 #################
