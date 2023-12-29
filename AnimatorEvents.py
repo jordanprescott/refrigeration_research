@@ -10,17 +10,20 @@ class AnimChannel():
     def update(self, ax):
         raise NotImplementedError
 
-
 class Animator():
-    def __init__(self, animChannels: List(AnimChannel)):
+    def __init__(self, animChannels: List(AnimChannel), sim):
         self.animChannels = animChannels
+        self.sim = sim
         fig, ax = plt.subplots()
         self.fig = fig
         self.ax = ax
 
 
-    def animate(self, i):
+    def animate(self, _):
+        self.sim.step()
+
         self.ax.clear()
+        
         for aCh in self.animChannels:
             aCh.update(self.ax)
 
@@ -39,4 +42,9 @@ class Compressor(AnimChannel):
         super().__init__(self, channel)
         self.pos = pos
         self.size = size
+
+    def update(self, ax):
+        sv = self.channel.value
+
+        ax.add_patch()
 

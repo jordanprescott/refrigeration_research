@@ -52,11 +52,11 @@ class SystemsHandler:
 
     def globalState(self): return {ch.name: ch.value for ch in self.channels}
 
-class TimedSimulation:
+
+class BaseSimulation:
     def __init__(self, posters, channels):
         self.simulator = self.setSim(posters, channels)
         self.channelNames = list(self.simulator.globalState().keys())
-        self.history = [list(self.simulator.globalState().values())]
 
     def setSim(self, systems, channels):
         sim = SystemsHandler()
@@ -72,6 +72,15 @@ class TimedSimulation:
     def step(self):
         [P.update() for P in self.simulator.posters]
         [P.post() for P in self.simulator.posters]
+
+class TimedSimulation(BaseSimulation):
+    def __init__(self, posters, channels):
+        super().__init__(posters, channels)
+        self.channelNames = list(self.simulator.globalState().keys())
+        self.history = [list(self.simulator.globalState().values())]
+
+    def step(self):
+        super().step()
         self.history.append(list(self.simulator.globalState().values()))
 
     def runSim(self, T):
