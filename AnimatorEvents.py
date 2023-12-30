@@ -24,9 +24,6 @@ class AnimChannel():
         raise NotImplementedError
 
 
-
-
-
 class Animator():
     def __init__(self, animChannels: List[AnimChannel], sim, xBounds, yBounds):
         self.animChannels = animChannels
@@ -60,7 +57,6 @@ class Animator():
 # --------------------
 
 
-# compressor stuff
 class Compressor(AnimChannel):
     # pos will be coordinate of bottom left corner as tuple (x, y), size will be (width, length)
     def __init__(self, channel, pos, size, numCompressors):
@@ -116,8 +112,6 @@ class Compressors(AnimChannel):
         ax.add_patch(mpatches.Polygon(self.coords, fill=False, color='black'))
 
 
-
-# evaporator stuff
 class Evaporator(AnimChannel):
     def __init__(self, channel, pos, size, numEvaporators):
         super().__init__(channel, pos, size)
@@ -130,7 +124,6 @@ class Evaporator(AnimChannel):
         yBuffer = self.size[1] * 0.2
 
         ax.text(self.pos[0] + self.size[0] * 0.5, self.pos[1] - 2.5 * yBuffer, 'Evaporators', fontsize=10, va='center', ha='center')
-
 
 
 class Evaporators(AnimChannel):
@@ -155,7 +148,6 @@ class Evaporators(AnimChannel):
         ax.add_patch(mpatches.Polygon(self.coords, fill=self.channel.value, edgecolor='black'))
 
 
-# vessel stuff
 class Vessel(AnimChannel):
     def __init__(self, channel, pos, size):
         super().__init__(channel, pos, size)
@@ -166,7 +158,6 @@ class Vessel(AnimChannel):
         plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .25, 'SP:' + str(round(self.channel.value, 5)), fontsize=10, va='center', ha='center')
 
 
-# condenser stuff
 class Condenser(AnimChannel):
     def __init__(self, channel, pos, size):
         super().__init__(channel, pos, size)
@@ -176,21 +167,17 @@ class Condenser(AnimChannel):
         plt.text(self.pos[0] + self.size[0] * 0.5, self.pos[1] + self.size[1] * 0.5, 'Condenser', fontsize=10, va='center', ha='center')
 
 
-# expansion valve stuff
 class ExpansionValve(AnimChannel):
     def __init__(self, channel, pos, size):
         super().__init__(channel, pos, size)
         self.coords = np.insert(self.coords, 0, [[pos[0] + size[0] * 0.5, pos[1] + size[1] * 0.5]], axis=0)
         self.coords = np.insert(self.coords, 3, [[pos[0] + size[0] * 0.5, pos[1] + size[1] * 0.5]], axis=0)
 
-
-
     def update(self, ax):
         ax.add_patch(mpatches.Polygon(self.coords, fill=True, color='black'))
         plt.text(self.pos[0] + self.size[0], self.pos[1] + self.size[1] * 0.5, 'Expansion Valve', fontsize=10, va='center', ha='left')
 
 
-# q_out stuff
 class HeatOut(AnimChannel):
     def __init__(self, channel, pos):
         super().__init__(channel, pos, None)
@@ -204,7 +191,6 @@ class HeatOut(AnimChannel):
         plt.text(self.pos[0], self.pos[1] + self.channel.value * scale * 0.5, '  Q out', fontsize=10, va='center', ha='left')
 
 
-# q_in stuff
 class HeatIn(AnimChannel):
     def __init__(self, channel, pos):
         super().__init__(channel, pos, None)
