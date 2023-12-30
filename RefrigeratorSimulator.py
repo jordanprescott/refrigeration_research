@@ -170,7 +170,7 @@ refSim.plotVals(
 	[['SlideValveA', 'SlideValveB', 'SlideValveC', 'SlideValveD'], ['TotalCompressorPower'], ['SuctionPressure'],
 	 ['RoomTemp'], ['Qadded', 'TotalQin']])
 
-#################
+## Animation
 testSim = BaseSimulation(posters, channels)
 
 cBody = Compressor(channel=None, pos=(0.6,0.05), size=(0.25,0.5), numCompressors=4)
@@ -197,7 +197,6 @@ qin = HeatIn(channel=channels[8], pos=(0.3, -0.425))
 qout = HeatOut(channel=channels[9], pos=(0.725, 0.85))
 
 arw = PathArrows(v, cBody, cond, expn, eBody)
-
 
 a = Animator([cBody, ca, cb, cc, cd, eBody, ea, eb, ec, ed, ee, v, cond, expn, qin, qout, arw], testSim, [0.1, 1], [-0.85, 1.2])
 a.animate(10)
