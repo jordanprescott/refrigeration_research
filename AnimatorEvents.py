@@ -109,7 +109,6 @@ class Compressors(AnimChannel):
         body.cAdded += 1
 
     def update(self, ax):
-        print(self.channel.value)
         if self.channel.value != -1:
             self.slideCoords[2][1] = self.body.pos[1] + self.channel.value * self.body.size[1] * 0.95
             self.slideCoords[3][1] = self.body.pos[1] + self.channel.value * self.body.size[1] * 0.95
