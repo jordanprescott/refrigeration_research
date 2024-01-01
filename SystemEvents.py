@@ -50,6 +50,8 @@ class SystemsHandler:
     def addChannel(self, channel):
         self.channels.append(channel)
 
+    def getChannel(self, name): return [ch for ch in self.channels if ch.name == name][0]
+
     def globalState(self): return {ch.name: ch.value for ch in self.channels}
 
 
