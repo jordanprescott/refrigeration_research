@@ -6,7 +6,6 @@ import matplotlib.patches as mpatches
 import numpy as np
 from matplotlib import cm
 
-
 class AnimChannel():
     def __init__(self, channel, pos, size):
         self.channel = channel

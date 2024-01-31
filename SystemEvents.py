@@ -8,6 +8,22 @@ class DataChannel:
         self.subscribers: List[str] = []
         self.publishers: List[str] = []
 
+
+class GroupChannel(DataChannel):
+    def __init__(self, name: str, dataChannels: List[DataChannel]):
+        super().__init__(name, None)
+        self.dataChannels = dataChannels
+    
+    @property
+    def value(self)
+        return [dC.value for dC in self.dataChannels]
+    
+    @value.setter
+    def value(self, values):
+        for i, v in enumerate(values):
+            self.dataChannels[i].value = v
+
+
 class Poster:
     def __init__(self, name, inputs, outputs, system):
         self.name: str = name
@@ -18,10 +34,10 @@ class Poster:
 
     def update(self):
         state = self.system(*[inp.value for inp in self.inputs])
-        try:
-            self.state = list(state)
-        except:
-            self.state = [state]
+        if len(self.outputs) == 1:
+            self.state = [state]  # assume standard return format for function (return output)
+        else:
+            self.state = list(state)  
 
     def post(self):
         for output, val in zip(self.outputs, self.state):
@@ -52,7 +68,7 @@ class SystemsHandler:
 
     def getChannel(self, name): return [ch for ch in self.channels if ch.name == name][0]
 
-    def globalState(self): return {ch.name: ch.value for ch in self.channels}
+    def globalState(self): return {ch.name: ch.value for ch in self.channels if type(ch) is DataChannel}
 
 
 class BaseSimulation:
@@ -111,3 +127,9 @@ class TimedSimulation(BaseSimulation):
 def func2Poster(name, func):
     from inspect import signature
     return ['{}Sys'.format(name), list(signature(func).parameters), [name], func]
+
+def fillOutChannels(channels):
+    for ch in channels:
+        if type(ch) is GroupChannel:
+            channels += ch.dataChannels
+    return channels
