@@ -11,11 +11,12 @@ class DataChannel:
 
 class GroupChannel(DataChannel):
     def __init__(self, name: str, dataChannels: List[DataChannel]):
-        super().__init__(name, None)
         self.dataChannels = dataChannels
+        super().__init__(name, [dC.value for dC in dataChannels])
+        
     
     @property
-    def value(self)
+    def value(self):
         return [dC.value for dC in self.dataChannels]
     
     @value.setter
@@ -94,7 +95,6 @@ class BaseSimulation:
 class TimedSimulation(BaseSimulation):
     def __init__(self, posters, channels):
         super().__init__(posters, channels)
-        self.channelNames = list(self.simulator.globalState().keys())
         self.history = [list(self.simulator.globalState().values())]
 
     def step(self):

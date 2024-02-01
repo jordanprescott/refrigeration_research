@@ -6,19 +6,19 @@ import CoolProp.CoolProp as CP
 
 channels = [
 	DataChannel('Time', 0),  # minutes
-	DataChannel('DeltaT', 10),  # minutes
+	DataChannel('DeltaT', .05),  # minutes
 	DataChannel('RoomTemp', 0),  # Celsius
 	DataChannel('AmbientTemp', 22),  # Celsius
 	DataChannel('SuctionPressure', 18),  # psia
 	DataChannel('DischargePressure', 180),  # psia
 	DataChannel('TotalCompressorPower', 300),  # kW
-	DataChannel(('TotalCompressorPower', 300),  # kW)
+	DataChannel('TotalEnergy', 0),  # kWh
 	DataChannel('Qadded', 600),  # kW 
 	DataChannel('TotalQin', 600),  # kW
 	DataChannel('TotalQout', 1000),  # kW
-	DataChannel('TotalVolumetricHighFlow', .5),  # m^3/s
-	DataChannel('TotalMassHighFlow', 1),  # kg/s
-	DataChannel('TotalMassLowFlow', 1),  # kg/s
+	DataChannel('TotalVolumetricHighFlow', .5),  # m^3/m
+	DataChannel('TotalMassHighFlow', 1),  # kg/m
+	DataChannel('TotalMassLowFlow', 1),  # kg/m
     DataChannel('CondenserFan', .5),  # Condenser  Fan Speed
     GroupChannel('SlideValves', [DataChannel('SlideValveA', -1), 
                                  DataChannel('SlideValveB', -1), 
@@ -55,17 +55,16 @@ def setRoomTemp(RoomTemp, Qadded, TotalQin, DeltaT):
 	return euler(RoomTemp, RoomTempDot, DeltaT)
 
 def setTotalVolumetricHighFlow(SlideValves):
-	slides = [SlideValveA, SlideValveB, SlideValveC, SlideValveD]
-	slideOn = [e for e in slides if e > 0]
-	return (np.sum(slideOn) * .9 + len(slideOn) * .1) / len(slides)  # start up throughput around 10%
+	slideOn = [e for e in SlideValves if e > 0]
+	return (np.sum(slideOn) * .9 + len(slideOn) * .1) / len(SlideValves)  # start up throughput around 10%
 
 def setTotalMassHighFlow(SuctionPressure, TotalVolumetricHighFlow):
 	return CP.PropsSI('D', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia') * TotalVolumetricHighFlow
 
-def setTotalQin(TotalMassLowFlow, TotalEvapDuty, RoomTemp, SuctionPressure):
+def setTotalQin(TotalMassLowFlow, EvaporatorsOn, RoomTemp, SuctionPressure):
 	ALPHA = 8
 	tempDiff = RoomTemp - toCelsius(CP.PropsSI('T', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia'))
-	return ALPHA * TotalMassLowFlow * TotalEvapDuty * tempDiff
+	return ALPHA * TotalMassLowFlow * sum(EvaporatorsOn) * tempDiff
 
 def setTotalQout(TotalMassHighFlow, CondenserFan, AmbientTemp, DischargePressure):
 	BETA = 200
@@ -73,11 +72,13 @@ def setTotalQout(TotalMassHighFlow, CondenserFan, AmbientTemp, DischargePressure
 	return BETA * TotalMassHighFlow * CondenserFan * tempDiff
 
 def setTotalCompressorPower(SlideValves, SuctionPressure):
-	slides = [SlideValveA, SlideValveB, SlideValveC, SlideValveD]
-	slideOn = [e for e in slides if e > 0]
+	slideOn = [e for e in SlideValves if e > 0]
 	power = np.sum(slideOn) * 100 + len(slideOn) * 75  # rough estimate of Compressor Power
 	perc = 1 + (18 - SuctionPressure) / 50  # 2%/psig efficiency gain with higher suction pressure
 	return perc * power
+
+def setTotalEnergy(TotalEnergy, TotalCompressorPower, DeltaT):
+	return euler(TotalEnergy, TotalCompressorPower, DeltaT/60) # conversion from minutes to hours
 
 def setSuctionPressure(SuctionPressure, TotalVolumetricHighFlow, TotalQin, DeltaT):
 	DECAY = .5
@@ -180,7 +181,7 @@ def optController(SuctionPressure, RoomTemp, Qadded):
 		evaporators = [0] * n
 	
 	M.clear()
-	return compressors + evaporators
+	return [compressors, evaporators]
 
 ## Configure Systems
 
@@ -189,17 +190,15 @@ posters = [
 	func2Poster('Qadded', setQadded),
 	func2Poster('RoomTemp', setRoomTemp),
 	func2Poster('TotalVolumetricHighFlow', setTotalVolumetricHighFlow),
-	func2Poster('TotalEvapDuty', setTotalEvapDuty),
 	func2Poster('TotalMassHighFlow', setTotalMassHighFlow),
 	func2Poster('TotalQin', setTotalQin),
 	func2Poster('TotalQout', setTotalQout),
 	func2Poster('TotalCompressorPower', setTotalCompressorPower),
+	func2Poster('TotalEnergy', setTotalEnergy),
 	func2Poster('SuctionPressure', setSuctionPressure),
-	['SlideValveSys', ['SuctionPressure'], ['SlideValves'],
-	 feedbackSlideValves],
-	['EvaporatorSys', ['RoomTemp'], ['EvaporatorsOn'],
-	 feedbackEvaporatorOn]
-	#['OptController', ['SuctionPressure', 'RoomTemp', 'Qadded'], ['SlideValves', 'Evaporators'], optController]
+	['SlideValveSys', ['SuctionPressure'], ['SlideValves'], feedbackSlideValves],
+	['EvaporatorSys', ['RoomTemp'], ['EvaporatorsOn'], feedbackEvaporatorOn]
+	#['OptController', ['SuctionPressure', 'RoomTemp', 'Qadded'], ['SlideValves', 'EvaporatorsOn'], optController]
 ]
 
 
