@@ -136,10 +136,12 @@ def feedbackEvaporatorOn(RoomTemp):
 # Optimization Controllers
 import mip
 
-def optController(SuctionPressure, RoomTemp, Qadded):	
+def optController(SuctionPressure, RoomTemp, Qadded, SlideValves):	
 	T = 10 # Horizon
 	n = 4 # number of compressors
 	m = 5 # number of evaporators
+	ONPOWER = 600
+	SLIDEPOWER = 1000
 	lamb1 = 40
 	lamb2 = 0
 	lamb3 = 0
@@ -156,11 +158,11 @@ def optController(SuctionPressure, RoomTemp, Qadded):
 	Tmp =  M.add_var_tensor((T,), 'Tmp', lb=float('-inf')) # temperature for each time
 
 	# objectives
-	power = mip.xsum([75 * o[i, j] + 100 * s[i, j] for i in range(T) for j in range(n)])   # compressor power
-	switchComp = mip.xsum([o[i, j] - o[i - 1, j] for i in range(1, T) for j in range(n)])  # switching cost for compressors
-	switchEvap = mip.xsum([e[i, j] - e[i - 1, j] for i in range(1, T) for j in range(n)])  # switching cost for evaporators
+	power = mip.xsum([ONPOWER * o[i, j] + SLIDEPOWER * s[i, j] for i in range(T) for j in range(n)])   # compressor power
+	# switchComp = mip.xsum([o[i, j] - o[i - 1, j] for i in range(1, T) for j in range(n)])  # switching cost for compressors
+	# switchEvap = mip.xsum([e[i, j] - e[i - 1, j] for i in range(1, T) for j in range(n)])  # switching cost for evaporators
 	SPcost = mip.xsum([spAbs[i] for i in range(T)])
-	M.objective = mip.minimize(power + lamb1 * SPcost + lamb2 * switchComp + lamb3 * switchEvap)
+	M.objective = mip.minimize(power + lamb1 * SPcost)
 
 	TempDiff = RoomTemp - toCelsius(CP.PropsSI('T', 'P', toPASCAL(SuctionPressure), 'Q', 1, 'Ammonia'))
 	B = 6.5 * TempDiff
