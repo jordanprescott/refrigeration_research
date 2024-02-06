@@ -154,7 +154,7 @@ class Vessel(AnimChannel):
     def update(self, ax):
         ax.add_patch(mpatches.Polygon(self.coords, fill=False))
         plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .75, 'Vessel', fontsize=10, va='center', ha='center')
-        plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .25, 'SP:' + str(round(self.channel.value, 5)), fontsize=10, va='center', ha='center')
+        plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .25, 'SP:' + str(round(self.channel.value, 3)), fontsize=10, va='center', ha='center')
 
 
 class Condenser(AnimChannel):
@@ -196,11 +196,29 @@ class HeatIn(AnimChannel):
 
     def update(self, ax):
         inferno_cm = cm.inferno(range(256))
-        scale = 0.00045  # use to normalize qin and qout, tweak internally
+        scale = 0.0000045  # use to normalize qin and qout, tweak internally
 
         ax.arrow(self.pos[0], self.pos[1] - self.channel.value * scale, 0, self.channel.value * scale, shape='full', linewidth=3, head_width=.03,
              color=inferno_cm[round(self.channel.value * scale * 255)], label='1')
         plt.text(self.pos[0], self.pos[1] - self.channel.value * scale * 0.5, '  Q in', fontsize=10, va='center', ha='left')
+
+
+class Power(AnimChannel):
+    running_power = 0
+    def __init__(self, channel, pos, size):
+        super().__init__(channel, pos, size)
+        self.running_power = 0
+        self.t = 0
+
+    def update(self, ax):
+        self.running_power += self.channel.value
+        self.t += 1
+        ax.add_patch(mpatches.Polygon(self.coords, fill=False))
+        plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .75, 'Running power (t=' + str(self.t) + '):', fontsize=10, va='center', ha='center')
+        plt.text(self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1] * .25, str(round(self.running_power, 2)), fontsize=10, va='center', ha='center')
+
+
+
 
 
 class PathArrows(AnimChannel):
