@@ -196,7 +196,7 @@ class HeatIn(AnimChannel):
 
     def update(self, ax):
         inferno_cm = cm.inferno(range(256))
-        scale = 0.0000045  # use to normalize qin and qout, tweak internally
+        scale = 0.001  # use to normalize qin and qout, tweak internally
 
         ax.arrow(self.pos[0], self.pos[1] - self.channel.value * scale, 0, self.channel.value * scale, shape='full', linewidth=3, head_width=.03,
              color=inferno_cm[round(self.channel.value * scale * 255)], label='1')
